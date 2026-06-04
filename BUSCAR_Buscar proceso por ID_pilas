@@ -1,0 +1,13 @@
+FUNCION BuscarPorID(idBuscado: ENTERO) -> BOOLEANO:
+    actual <- tope
+    PARA actual != NULO HACER          // FOR: recorrido secuencial
+        SI actual.idProceso = idBuscado ENTONCES
+            IMPRIMIR 'Encontrado: ', actual.nombreProceso,
+                     actual.tamanoBloque
+            RETORNAR VERDADERO
+        FIN SI
+        actual <- actual.siguiente
+    FIN PARA
+    IMPRIMIR 'No encontrado'
+    RETORNAR FALSO
+FIN FUNCION
