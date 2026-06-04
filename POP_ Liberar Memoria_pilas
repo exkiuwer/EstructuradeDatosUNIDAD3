@@ -1,0 +1,13 @@
+FUNCION Pop() -> BOOLEANO:
+    SI tope = NULO ENTONCES
+        IMPRIMIR 'Error: Pila vacia'
+        RETORNAR FALSO
+    FIN SI
+    eliminar   <- tope
+    tope       <- tope.siguiente    // Mueve el tope
+    usadoKB    <- usadoKB - eliminar.tamanoBloque
+    cantBloques<- cantBloques - 1
+    LIBERAR(eliminar)               // Libera memoria dinamica
+    IMPRIMIR 'Bloque liberado correctamente'
+    RETORNAR VERDADERO
+FIN FUNCION
