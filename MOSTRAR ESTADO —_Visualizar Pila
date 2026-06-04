@@ -1,0 +1,13 @@
+PROCEDIMIENTO MostrarEstado():
+    IMPRIMIR 'Capacidad: ', totalKB, ' KB'
+    IMPRIMIR 'Usada    : ', usadoKB, ' KB'
+    IMPRIMIR 'Libre    : ', (totalKB - usadoKB), ' KB'
+    actual <- tope
+    nivel  <- 1
+    MIENTRAS actual != NULO HACER       // WHILE: recorre nodos
+        IMPRIMIR nivel, actual.idProceso,
+                 actual.nombreProceso, actual.tamanoBloque
+        actual <- actual.siguiente
+        nivel  <- nivel + 1
+    FIN MIENTRAS
+FIN PROCEDIMIENTO
