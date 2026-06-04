@@ -1,0 +1,20 @@
+FUNCION Push(id, nombre, tamano) -> BOOLEANO:
+    SI tamano <= 0 ENTONCES
+        IMPRIMIR 'Error: Tamano invalido'
+        RETORNAR FALSO
+    FIN SI
+    SI (usadoKB + tamano) > totalKB ENTONCES
+        IMPRIMIR 'Error: Memoria insuficiente'
+        RETORNAR FALSO
+    FIN SI
+    nuevo <- CREAR NodoMemoria()
+    nuevo.idProceso     <- id
+    nuevo.nombreProceso <- nombre
+    nuevo.tamanoBloque  <- tamano
+    nuevo.siguiente     <- tope      // Enlaza con tope actual
+    tope                <- nuevo     // Nuevo nodo es el tope
+    usadoKB             <- usadoKB + tamano
+    cantBloques         <- cantBloques + 1
+    IMPRIMIR 'Bloque asignado correctamente'
+    RETORNAR VERDADERO
+FIN FUNCION
