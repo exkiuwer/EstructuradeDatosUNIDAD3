@@ -1,0 +1,297 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstdlib>
+using namespace std;
+
+// ============================================================
+//  ESTRUCTURA DEL NODO DE LA PILA
+// ============================================================
+struct NodoMemoria {
+    int    idProceso;        // ID del proceso duenio del bloque
+    string nombreProceso;    // Nombre descriptivo del proceso
+    int    tamanoBloque;     // Tamano en KB del bloque asignado
+    NodoMemoria* siguiente;  // Puntero al nodo anterior de la pila
+};
+
+// ============================================================
+//  CLASE PILA DINAMICA
+// ============================================================
+class PilaMemoria {
+private:
+    NodoMemoria* tope;       // Puntero al tope de la pila
+    int          totalKB;    // Memoria total del sistema (KB)
+    int          usadoKB;    // Memoria actualmente usada (KB)
+    int          cantBloques;// Cantidad de bloques en la pila
+
+public:
+    // Constructor
+    PilaMemoria(int capacidad = 1024) {
+        tope        = NULL;
+        totalKB     = capacidad;
+        usadoKB     = 0;
+        cantBloques = 0;
+    }
+    // Destructor: libera todos los nodos
+    ~PilaMemoria() {
+        while (!estaVacia()) pop();
+    }
+    // ----------------------------------------------------------
+    // PUSH: Asignar memoria a un proceso
+    // Complejidad temporal: O(1)
+    // Utiliza: asignacion dinamica con new
+    // ----------------------------------------------------------
+    bool push(int idProceso, string nombreProceso, int tamano) {
+        // IF: verifica si hay suficiente memoria disponible
+        if (tamano <= 0) {
+            cout << "  [ERROR] El tamano debe ser mayor a 0 KB.\n";
+            return false;
+        }
+        if (usadoKB + tamano > totalKB) {
+            cout << "  [ERROR] Memoria insuficiente. Disponible: "
+                 << (totalKB - usadoKB) << " KB, solicitado: "
+                 << tamano << " KB.\n";
+            return false;
+        }
+        // Crear nuevo nodo dinamicamente
+        NodoMemoria* nuevo = new NodoMemoria;
+        nuevo->idProceso     = idProceso;
+        nuevo->nombreProceso = nombreProceso;
+        nuevo->tamanoBloque  = tamano;
+        nuevo->siguiente     = tope;   // Enlaza con el tope actual
+        tope        = nuevo;           // El nuevo nodo es el tope
+        usadoKB    += tamano;
+        cantBloques++;
+        cout << "  [OK] Bloque de " << tamano << " KB asignado al proceso '"
+             << nombreProceso << "' (ID=" << idProceso << ").\n";
+        return true;
+    }
+    // ----------------------------------------------------------
+    // POP: Liberar el bloque de memoria del tope
+    // Complejidad temporal: O(1)
+    // Utiliza: delete para liberar memoria dinamica
+    // ----------------------------------------------------------
+    bool pop() {
+        // IF: verifica que la pila no este vacia
+        if (estaVacia()) {
+            cout << "  [ERROR] La pila de memoria esta vacia. Nada que liberar.\n";
+            return false;
+        }
+        NodoMemoria* eliminar = tope;
+        cout << "  [OK] Liberando bloque de " << eliminar->tamanoBloque
+             << " KB del proceso '" << eliminar->nombreProceso
+             << "' (ID=" << eliminar->idProceso << ").\n";
+        tope        = tope->siguiente; // Mueve el tope al siguiente nodo
+        usadoKB    -= eliminar->tamanoBloque;
+        cantBloques--;
+        delete eliminar;               // Libera la memoria del nodo
+        return true;
+    }
+    // ----------------------------------------------------------
+    // VER TOPE: Consultar el bloque en el tope sin eliminarlo
+    // Complejidad temporal: O(1)
+    // ----------------------------------------------------------
+    void verTope() {
+        if (estaVacia()) {
+            cout << "  [INFO] La pila esta vacia.\n";
+            return;
+        }
+        cout << "  Tope -> ID: " << tope->idProceso
+             << " | Proceso: " << tope->nombreProceso
+             << " | Tamano: " << tope->tamanoBloque << " KB\n";
+    }
+    // ----------------------------------------------------------
+    // MOSTRAR ESTADO: Visualizar toda la pila
+    // Complejidad temporal: O(n) - recorre todos los nodos con WHILE
+    // El WHILE se utiliza porque no se conoce el tamanio de antemano
+    // ----------------------------------------------------------
+    void mostrarEstado() {
+        cout << "\n  ======= ESTADO DE MEMORIA =======\n";
+        cout << "  Capacidad total : " << totalKB     << " KB\n";
+        cout << "  Memoria usada   : " << usadoKB     << " KB\n";
+        cout << "  Memoria libre   : " << (totalKB - usadoKB) << " KB\n";
+        cout << "  Bloques activos : " << cantBloques << "\n";
+        cout << "  ---------------------------------\n";
+        if (estaVacia()) {
+            cout << "  [Pila vacia]\n";
+        } else {
+            NodoMemoria* actual = tope;
+            int nivel = 1;
+            // WHILE: recorre desde el tope hasta el fondo de la pila
+            while (actual != NULL) {
+                cout << "  [" << nivel << "] ID=" << actual->idProceso
+                     << " | " << actual->nombreProceso
+                     << " | " << actual->tamanoBloque << " KB\n";
+                actual = actual->siguiente;
+                nivel++;
+            }
+        }
+        cout << "  =================================\n\n";
+    }
+    // ----------------------------------------------------------
+    // BUSCAR: Verificar si un proceso tiene memoria asignada
+    // Complejidad temporal: O(n) - recorre con FOR hasta encontrar
+    // El FOR se usa cuando hay un recorrido secuencial de estructura
+    // ----------------------------------------------------------
+    bool buscarPorID(int idBuscado) {
+        NodoMemoria* actual = tope;
+        // FOR: recorre cada nodo de la pila buscando el ID
+        for (; actual != NULL; actual = actual->siguiente) {
+            if (actual->idProceso == idBuscado) {
+                cout << "  [ENCONTRADO] ID=" << actual->idProceso
+                     << " | Proceso: " << actual->nombreProceso
+                     << " | Bloque: " << actual->tamanoBloque << " KB\n";
+                return true;
+            }
+        }
+        cout << "  [NO ENCONTRADO] El proceso con ID=" << idBuscado
+             << " no tiene memoria asignada.\n";
+        return false;
+    }
+    // ----------------------------------------------------------
+    // PERSISTENCIA: Guardar estado en archivo
+    // ----------------------------------------------------------
+    void guardarEnArchivo(string archivo) {
+        ofstream f(archivo.c_str());
+        if (!f.is_open()) {
+            cout << "  [ERROR] No se pudo abrir el archivo para guardar.\n";
+            return;
+        }
+        f << totalKB << "\n";
+        NodoMemoria* actual = tope;
+        // WHILE: recorre la pila para escribir cada bloque
+        while (actual != NULL) {
+            f << actual->idProceso << ","
+              << actual->nombreProceso << ","
+              << actual->tamanoBloque << "\n";
+            actual = actual->siguiente;
+        }
+        f.close();
+        cout << "  [OK] Estado guardado en '" << archivo << "'.\n";
+    }
+
+   // ----------------------------------------------------------
+    // PERSISTENCIA: Cargar estado desde archivo
+    // ----------------------------------------------------------
+    void cargarDesdeArchivo(string archivo) {
+        ifstream f(archivo.c_str());
+        if (!f.is_open()) {
+            cout << "  [INFO] No se encontro archivo de estado previo.\n";
+            return;
+        }
+        // Limpiar pila actual
+        while (!estaVacia()) pop();
+         int cap;
+        f >> cap;
+        totalKB = cap;
+        // Variables temporales para reconstruir la pila al reves
+        int    ids[500];
+        string nombres[500];
+        int    tamanos[500];
+        int    cont = 0;
+        string linea;
+        getline(f, linea); // consume el salto de linea
+        // WHILE: lee linea por linea del archivo
+        while (getline(f, linea) && cont < 500) {
+            int c1 = linea.find(',');
+            int c2 = linea.find(',', c1 + 1);
+            if (c1 == (int)string::npos || c2 == (int)string::npos) continue;
+            ids[cont]     = atoi(linea.substr(0, c1).c_str());
+            nombres[cont] = linea.substr(c1 + 1, c2 - c1 - 1);
+            tamanos[cont] = atoi(linea.substr(c2 + 1).c_str());
+            cont++;
+        }
+        f.close();
+         // Insertar en orden inverso para que el tope sea el correcto
+        // FOR: recorre el arreglo temporal en orden inverso
+        for (int i = cont - 1; i >= 0; i--) {
+            push(ids[i], nombres[i], tamanos[i]);
+        }
+        cout << "  [OK] Estado cargado desde '" << archivo << "'.\n";
+    }
+    bool estaVacia() { return tope == NULL; }
+    int  getMemoriaLibre() { return totalKB - usadoKB; }
+};
+
+// ============================================================
+//  FUNCIONES AUXILIARES DE MENU
+// ============================================================
+void limpiarPantalla() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+void pausar() {
+    cout << "\n  Presiona ENTER para continuar...";
+    cin.ignore();
+    cin.get();
+}
+
+void mostrarBanner() {
+    cout << "\n";
+    cout << "  ############################################\n";
+    cout << "  #     GESTOR DE MEMORIA - PILA DINAMICA   #\n";
+    cout << "  #    Sistema de Gestion de Procesos       #\n";
+    cout << "  #    Universidad Continental - 2024       #\n";
+    cout << "  ############################################\n\n";
+}
+
+// ============================================================
+//  PROGRAMA PRINCIPAL
+// ============================================================
+int main() {
+    PilaMemoria memoria(2048); // Pila con 2048 KB de capacidad
+    memoria.cargarDesdeArchivo("memoria_estado.txt");
+    int  opcion  = 0;
+    bool salir   = false;
+    // DO-WHILE: el menu se muestra al menos una vez y repite
+    // hasta que el usuario elija salir. Se usa DO-WHILE porque
+    // la primera iteracion siempre debe ejecutarse.
+    do {
+        limpiarPantalla();
+        mostrarBanner();
+        cout << "  --- MENU GESTOR DE MEMORIA ---\n";
+        cout << "  1. Asignar memoria (PUSH)\n";
+        cout << "  2. Liberar memoria del tope (POP)\n";
+        cout << "  3. Ver bloque en el tope\n";
+        cout << "  4. Mostrar estado completo de la memoria\n";
+        cout << "  5. Buscar proceso por ID\n";
+        cout << "  6. Guardar estado\n";
+        cout << "  0. Salir\n";
+        cout << "  Opcion: ";
+        cin  >> opcion;
+        // IF-ELSE: evalua la opcion seleccionada por el usuario
+        // Se utiliza para bifurcar el flujo segun la decision
+        if (opcion == 1) {
+            int    id, tam;
+            string nombre;
+            cout << "  ID del proceso  : "; cin >> id;
+            cout << "  Nombre          : "; cin >> nombre;
+            cout << "  Tamano (KB)     : "; cin >> tam;
+            memoria.push(id, nombre, tam);
+        } else if (opcion == 2) {
+            memoria.pop();
+        } else if (opcion == 3) {
+            memoria.verTope();
+        } else if (opcion == 4) {
+            memoria.mostrarEstado();
+        } else if (opcion == 5) {
+            int id;
+            cout << "  ID a buscar: "; cin >> id;
+            memoria.buscarPorID(id);
+        } else if (opcion == 6) {
+            memoria.guardarEnArchivo("memoria_estado.txt");
+        } else if (opcion == 0) {
+            memoria.guardarEnArchivo("memoria_estado.txt");
+            salir = true;
+            cout << "  Saliendo del gestor de memoria...\n";
+        } else {
+            cout << "  [ERROR] Opcion no valida.\n";
+        }
+        if (!salir) pausar();
+    } while (!salir);
+    return 0;
+}
